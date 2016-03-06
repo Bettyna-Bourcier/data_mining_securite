@@ -1,0 +1,4 @@
+﻿  main.c
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(36): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(40): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+  data_mining_securite.vcxproj -> c:\users\bettyna\documents\visual studio 2015\Projects\data_mining_securite\Debug\data_mining_securite.exe
