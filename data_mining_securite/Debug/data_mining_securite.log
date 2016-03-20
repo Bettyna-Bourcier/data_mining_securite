@@ -1,15 +1,18 @@
 ﻿  main.c
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(64): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(68): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(77): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(100): warning C4133: 'fonction' : types incompatibles - de 'WCHAR [260]' à 'const char *'
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(138): warning C4133: 'fonction' : types incompatibles - de 'WCHAR [260]' à 'const char *'
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(258): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(267): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(274): warning C4133: 'return' : types incompatibles - de 'csv_ligne *' à 'unsigned char *'
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(307): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(316): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(332): warning C4133: 'return' : types incompatibles - de 'csv_ligne *' à 'unsigned char *'
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(468): warning C4133: '=' : types incompatibles - de 'unsigned char *' à 'csv_ligne *'
-c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(480): warning C4133: '=' : types incompatibles - de 'unsigned char *' à 'csv_ligne *'
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(75): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(79): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(88): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(111): warning C4133: 'fonction' : types incompatibles - de 'WCHAR [260]' à 'const char *'
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(149): warning C4133: 'fonction' : types incompatibles - de 'WCHAR [260]' à 'const char *'
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(250): warning C4018: '<' : incompatibilité signed/unsigned
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(222): warning C4101: 'ligne_csv' : variable locale non référencée
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(506): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(515): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(522): warning C4133: 'return' : types incompatibles - de 'csv_ligne *' à 'unsigned char *'
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(555): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(564): warning C4244: '=' : conversion de 'double' en 'float', perte possible de données
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(580): warning C4133: 'return' : types incompatibles - de 'csv_ligne *' à 'unsigned char *'
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(745): warning C4133: '=' : types incompatibles - de 'unsigned char *' à 'csv_ligne *'
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(760): warning C4133: '=' : types incompatibles - de 'unsigned char *' à 'csv_ligne *'
+c:\users\bettyna\documents\visual studio 2015\projects\data_mining_securite\data_mining_securite\main.c(778): warning C4133: '=' : types incompatibles - de 'unsigned char *' à 'csv_ligne *'
   data_mining_securite.vcxproj -> C:\Users\Bettyna\documents\visual studio 2015\Projects\data_mining_securite\Debug\data_mining_securite.exe

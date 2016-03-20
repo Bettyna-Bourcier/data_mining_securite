@@ -5,15 +5,19 @@
 
 #define _CRT_SECURE_NO_DEPRECATE
 
-// #define Chemin_dossier L"C:\\Users\\Bettyna\\Documents\\ESIEA_4A\\S2\\securite_virologie\\projet_final\\ensemble_A_solution\\wikipedia_clair_2"
-#define Chemin_dossier L"C:\\Users\\Bettyna\\Documents\\ESIEA_4A\\S2\\securite_virologie\\projet_final\\ensemble_A_tier"
-#define Chemin_dossier_B L"C:\\Users\\Bettyna\\Documents\\ESIEA_4A\\S2\\securite_virologie\\projet_final\\ensemble_B"
+#define Chemin_dossier L"ensemble_A"
+#define Chemin_dossier_lang L"ensemble_A_lang_uniquement"
+#define Chemin_dossier_B L"ensemble_B"
 #define Nom_fichier_moyenne_ecart_type "data.csv"
 #define Nom_fichier_classement "classement.csv"
 #define Nom_fichier_resultat_kmeans "resultat_kmeans.csv"
+#define Nom_fichier_resultat_kmeans_lang "resultat_kmeans_lang.csv"
 #define Nombre_de_classes 3
+#define Nombre_de_classes_lang 16
 #define Nom_fichier_type_corrige "resultat_kmeans_type_corrige.csv"
+#define Nom_fichier_lang_corrige "resultat_kmeans_lang_corrige.csv"
 #define Nom_fichier_centres_corriges "centres_corriges.csv"
+#define Nom_fichier_n_gram_entrainement "n_gram_entrainement.csv"
 
 typedef struct csv_ligne csv_ligne;
 
@@ -29,6 +33,13 @@ typedef struct centre centre;
 struct centre {
 	float x;
 	float y;
+};
+
+typedef struct n_gram n_gram;
+struct n_gram {
+	char chaine[3];
+	float frequence;
+	int occurrence;
 };
 
 // Calcul de la moyenne
@@ -89,7 +100,7 @@ int parcourt_dossier_classement(wchar_t *sDir, void(*f)(char*, FILE*, struct cen
 
 	wsprintf(sPath, L"%s\\*.*", sDir); // *.* prend tous les fichiers du dossier
 
-									   // Si le dossier n'existe pas...
+	// Si le dossier n'existe pas...								   
 	if ((hFind = FindFirstFile(sPath, &fdFile)) == INVALID_HANDLE_VALUE) {
 		wprintf(L"Le chemin spécifié n'existe pas : [%s]\n", sDir);
 	}
@@ -183,6 +194,235 @@ void sauvegarde_moyenne_ecart_type(char* chemin,FILE *csv) {
 }
 
 
+void n_gram_incremente(struct n_gram* n_grams, char *bout_mot) {
+	boolean flag_existe = FALSE;
+
+	for (int i = 0; i < n_grams[0].occurrence; i++) {
+		if (strcmp(n_grams[i].chaine, bout_mot) == 0) {
+			flag_existe = TRUE;
+			n_grams[i].occurrence++;
+			n_grams[0].frequence++;
+		}
+	}
+	if (!flag_existe) { // si pas déja présent on initialize le n_gram
+		n_grams[0].occurrence++; // on augmente la taille
+		n_grams[0].frequence++;
+		strcpy(n_grams[n_grams[0].occurrence].chaine, bout_mot);
+		n_grams[n_grams[0].occurrence].occurrence = 1;
+	}
+}
+
+// enrichie la structure n_grams a partir du ficheir passé en paraètre
+void n_gramme(struct n_gram* n_grams, char* nom_fichier) {
+	FILE *fichier_texte = NULL;
+	unsigned char *tableau_fichier;
+	long taille_fichier;
+	float moyenne = 0;
+	float ecart_type = 0;
+	char ligne_csv[2048];
+	char mot[100];
+	char bout_mot[4];
+	char delimiter[] = " \n\t";
+
+	fichier_texte = fopen(nom_fichier, "rb");
+	fseek(fichier_texte, 0, SEEK_END);   // place le ponteur à la fin du fichier
+	taille_fichier = ftell(fichier_texte); // position du pointeur => taille du fichier
+	rewind(fichier_texte); // place le pointeur au début du fichier                   
+
+	tableau_fichier = (char *)malloc((taille_fichier + 1)*sizeof(char)); // créer un tablau pour acceuillir les valeurs des octets
+	fread(tableau_fichier, taille_fichier, 1, fichier_texte); // lit le contenu du fichier octet par octet et place les valeurs dans "tableau_fichier"
+	fclose(fichier_texte); // fermeture du fichier
+
+	int i = 0;
+	int k;
+
+	while (i < taille_fichier) {
+		k = 0;
+		while (i < taille_fichier - 1 && k < 98 && tableau_fichier[i] != ' ' && tableau_fichier[i] != '\n' && tableau_fichier[i] != '\t') {
+			mot[k] = tableau_fichier[i];
+			i++;
+			k++;
+		}
+		mot[k] = '\0';
+		i++;
+
+		if (strlen(mot) >= 3) {
+			for (int j = 0; j < strlen(mot) - 2; j++) {
+				sprintf(bout_mot, "%c%c%c", mot[0 + j], mot[1 + j], mot[2 + j]);
+				n_gram_incremente(n_grams, bout_mot);
+			}
+		}
+	}
+
+	free(tableau_fichier);
+}
+
+
+/* fonction utilisateur de comparaison fournie a qsort() */
+static int n_gram_compare(void const *a, void const *b)
+{
+	/* definir des pointeurs type's et initialise's
+	avec les parametres */
+	n_gram const *pa = a;
+	n_gram const *pb = b;
+
+	if (pa->frequence < pb->frequence) {
+		return 1;
+	}
+	else if (pa->frequence == pb->frequence) {
+		return 0;
+	}
+	else {
+		return -1;
+	}
+}
+
+void n_gram_classe(FILE *csv_ngram, int indice_classe) {
+	FILE *csv_langues_corriges = NULL;
+	int i = 0;
+	char line[1024];
+	char nom_fichier[1024];
+	char classe[3];
+	char csv_ligne_n_gram[1024];
+
+	struct n_gram* n_grams = malloc(20000 * sizeof(n_gram));
+	n_gram n_gram_taille = { "lg", 0, 0 };
+	n_grams[0] = n_gram_taille;
+
+
+	csv_langues_corriges = fopen(Nom_fichier_lang_corrige, "r");
+
+	while (fgets(line, sizeof line, csv_langues_corriges) != NULL) {// on lit une ligne
+		int i = 0;
+		int k = 0;
+
+		do {
+			nom_fichier[k] = line[i]; // on recopie le nom du fichier dans la struture (1ere colone de la ligne du csv, on s'arrête au premier ';')
+			i++;
+			k++;
+		} while (line[i] != ';');
+		nom_fichier[k] = '\0';
+
+		i++;
+		k = 0;
+		do {
+			i++;
+			k++;
+		} while (line[i] != ';');
+
+		i++;
+		k = 0;
+		do {
+			i++;
+			k++;
+		} while (line[i] != ';');
+
+		i++;
+		k = 0;
+		do {
+			classe[k] = line[i];
+			i++;
+			k++;
+		} while (line[i] != '\n');
+		classe[k] = '\0';
+
+		if (atoi(classe) == indice_classe) {
+			n_gramme(n_grams, nom_fichier);
+		}
+	}
+
+	fclose(csv_langues_corriges);
+
+	for (i = 1; i < n_grams[0].occurrence; i++) {
+		n_grams[i].frequence = n_grams[i].occurrence / n_grams[0].frequence;
+	}
+
+	qsort(n_grams, n_grams[0].occurrence, sizeof(n_gram), n_gram_compare);
+
+	for (i = 1; i <= 31; i++) {
+		sprintf(csv_ligne_n_gram, "%i;%s;%f\n", indice_classe, n_grams[i].chaine, n_grams[i].frequence);
+		fputs(csv_ligne_n_gram, csv_ngram);
+	}
+
+	printf("N-gram pour la Classe %i fait\n", indice_classe);
+
+	free(n_grams);
+}
+
+// Retourne l'indice de la langue du fichier (regarder result_kmeans_lan_corrige.csv pour la correspondance des langues)
+int determine_langue(char *chemin_fichier) {
+	struct n_gram* n_grams = malloc(20000 * sizeof(n_gram));
+	n_gram n_gram_taille = { "lg", 0, 0 }; // le premier "n_gram nous sert à stocker la taille de la strucuture et le nombre total de n_gram vu
+	n_grams[0] = n_gram_taille;
+
+	n_gramme(n_grams, chemin_fichier);
+
+	// calcule de la fréquence
+	for (int i = 1; i < n_grams[0].occurrence; i++) {
+		n_grams[i].frequence = n_grams[i].occurrence / n_grams[0].frequence;
+	}
+
+	// on ordonne de manière décroissante en regardant la fréquence
+	qsort(n_grams, n_grams[0].occurrence, sizeof(n_gram), n_gram_compare);
+
+	int compteur_courant_similarité_n_gram; // compte les n_gram en commum pour chaque groupe (dans les 30 premiers peu importe l'ordre)
+	int max_similarite_n_gram = 0;
+	int indice_classe_retenue = -1;
+	char indice_classe_csv[3];
+	char chaine_csv[4];
+	char line[1024];
+
+	// de 0 à nb_classe
+	for (int indice_classe = 0; indice_classe < 15; indice_classe++) {
+		FILE *csv_ngram_2 = fopen(Nom_fichier_n_gram_entrainement, "r");
+		compteur_courant_similarité_n_gram = 0;
+
+		// Pour chaque ligne
+		while (fgets(line, sizeof line, csv_ngram_2) != NULL) { // on lit une ligne
+			int i = 0;
+			int k = 0;
+
+			// on récupère le classe de la ligne sous forme de texte
+			do {
+				indice_classe_csv[k] = line[i];
+				i++;
+				k++;
+			} while (line[i] != ';');
+			indice_classe_csv[k] = '\0';
+
+			// si la ligne concerne la classe "courante"
+			if (atoi(indice_classe_csv) == indice_classe) {
+
+				i++;
+				k = 0;
+				do {
+					chaine_csv[k] = line[i];
+					i++;
+					k++;
+				} while (line[i] != ';');
+				chaine_csv[k] = '\0';
+
+				// Si le n_gram courant est dans les n_gram retenus pour le fichier (30 premiers)
+				// on incrémente le compteur de similarité
+				for (int j = 1; j <= 31; j++) {
+					if (strcmp(n_grams[j].chaine, chaine_csv) == 0) {
+						compteur_courant_similarité_n_gram++;
+					}
+				}
+			}
+		}
+		fclose(csv_ngram_2);
+
+		if (compteur_courant_similarité_n_gram > max_similarite_n_gram) {
+			max_similarite_n_gram = compteur_courant_similarité_n_gram;
+			indice_classe_retenue = indice_classe;
+		}
+	}
+	return indice_classe_retenue;
+}
+
+
+// affecte le fichier à un groupe et si dans le groupe "0" détermine la langue avec les n_grams (type 0 = fichier en clair)
 void classe_fichier(char* chemin, FILE *csv, struct centre* centres) {
 	FILE *fichier;
 	unsigned char *tableau_fichier;
@@ -223,11 +463,19 @@ void classe_fichier(char* chemin, FILE *csv, struct centre* centres) {
 		}
 	}
 
-	sprintf(ligne_csv, "%s;%f;%f;%i\n", chemin, csv_ligne_a_classer.moyenne, csv_ligne_a_classer.ecart_type, csv_ligne_a_classer.indice_classe); // construction de la ligne pour le csv
+	if (csv_ligne_a_classer.indice_classe == 0) {
+		// construction de la ligne pour le csv avec l'indice de la langue dans la dernière colonne
+		sprintf(ligne_csv, "%s;%f;%f;%i;%i\n", chemin, csv_ligne_a_classer.moyenne, csv_ligne_a_classer.ecart_type, csv_ligne_a_classer.indice_classe, determine_langue(chemin)); 
+	}
+	else {
+		// construction de la ligne pour le csv
+		sprintf(ligne_csv, "%s;%f;%f;%i\n", chemin, csv_ligne_a_classer.moyenne, csv_ligne_a_classer.ecart_type, csv_ligne_a_classer.indice_classe); 
+	}
+
 	fputs(ligne_csv, csv); // écriture dans le fichier
 }
 
-
+// Retourne un pointeur sur un tableau de csv_ligne (construit à partir du csv donné en entrée)
 unsigned char* construction_tableau(char* chemin, unsigned int taille) {
 	struct csv_ligne *csv_tableau = malloc(taille * sizeof(csv_ligne));
 	FILE *file = fopen(chemin, "r");
@@ -333,6 +581,7 @@ unsigned char* construction_tableau_corrige(char* chemin, unsigned int taille) {
 }
 
 
+// Retourne un nombre en les bornes min et max
 int rand_entre(int min, int max) {
 	return rand() % (max + 1 - min) + min;
 }
@@ -422,6 +671,7 @@ void k_means(int nb_classes, struct csv_ligne *ensemble, int taille_ensemble) {
 	
 }
 
+
 // Sauvegarde le resultat du kmeans dans un fichier CSV => ensemble A'
 void sauvegarde_resultat_kmeans(struct csv_ligne *resultat_kmeans, int taille_ensemble, char* nom_fichier) {
 	char ligne_csv[2048];
@@ -457,41 +707,87 @@ struct centre* sauvegarde_centres_corriges(struct csv_ligne *resultat_kmeans_cor
 	return centres_corriges;
 }
 
+
+
 int main(int argc, char *argv[]) {
 	int nb_fichiers;
 	struct csv_ligne *csv_tableau;
 	struct csv_ligne *csv_tableau_corrige;
 	centre *centres_corriges;
+	FILE *csv_ngram = NULL;
 
-	wprintf(L"\n\nEntrainnement - parcours du dossier : %s", Chemin_dossier);
-	nb_fichiers = parcourt_dossier(Chemin_dossier, sauvegarde_moyenne_ecart_type);
+	char choix;
 
-	if (nb_fichiers <= 0) {
-		return EXIT_FAILURE;
-	}
+	do {
+		printf("\n\n***** MENU ****** \n\n");
+		printf("1 - ENTRAINEMENT pour type de fichier (k-means) : parcours les fichiers du dossier ");
+		wprintf(L"%s", Chemin_dossier);
+		printf(" et genere '%s'\n", Nom_fichier_resultat_kmeans);
+		printf("2 - ENTRAINEMENT pour langues (k-means) : parcours les fichiers du dossier ");
+		wprintf(L"%s", Chemin_dossier_lang);
+		printf(" et genere '%s'\n", Nom_fichier_resultat_kmeans_lang);
+		printf("3 - ENTRAINEMENT pour langues (n-gram) : se base sur le fichier '%s' et genere le fichier '%s' \n", Nom_fichier_lang_corrige, Nom_fichier_n_gram_entrainement);
+		printf("4 - CLASSIFICATION : classe les fichiers du dossier ");
+		wprintf(L"%s", Chemin_dossier_B);
+		printf(" en se basant sur '%s' pour les types et '%s' pour les langues\n", Nom_fichier_type_corrige, Nom_fichier_n_gram_entrainement);
+		printf("q - quitter\n");
 
-	csv_tableau = construction_tableau(Nom_fichier_moyenne_ecart_type, nb_fichiers);
-	k_means(Nombre_de_classes, csv_tableau, nb_fichiers);
-	// on sauvegarde le résultat du k-means
-	sauvegarde_resultat_kmeans(csv_tableau, nb_fichiers, Nom_fichier_resultat_kmeans); // ensemble A' sous forme de fichier csv
+		choix = getchar();
 
-	printf("\n\nFin entrainement : %s a ete genere suite au k-means.", Nom_fichier_resultat_kmeans);
+		if (choix == '1') {
+			wprintf(L"\n\nEntrainnement - parcours du dossier : %s", Chemin_dossier);
+			nb_fichiers = parcourt_dossier(Chemin_dossier, sauvegarde_moyenne_ecart_type);
 
-	wprintf(L"\n\nAppuyez sur ENTER pour continuer vers la classification des fichiers du dossier %s", Chemin_dossier_B);
-	printf(" ; via le fichier corrige : %s .\n", Nom_fichier_type_corrige);
-	getchar();
+			if (nb_fichiers <= 0) {
+				return EXIT_FAILURE;
+			}
 
-	// construit ensemble (tableau de csv_ligne) à partir du fichier type corrigé
-	csv_tableau_corrige = construction_tableau_corrige(Nom_fichier_type_corrige, nb_fichiers);
-	
-	centres_corriges = sauvegarde_centres_corriges(csv_tableau_corrige, nb_fichiers, Nom_fichier_centres_corriges);
+			csv_tableau = construction_tableau(Nom_fichier_moyenne_ecart_type, nb_fichiers);
+			k_means(Nombre_de_classes, csv_tableau, nb_fichiers);
+			// on sauvegarde le résultat du k-means
+			sauvegarde_resultat_kmeans(csv_tableau, nb_fichiers, Nom_fichier_resultat_kmeans); // ensemble A' sous forme de fichier csv
 
-	// on va parcourir le dossier contenant les donnés à classer
-	// on va calculer la distance par rapport au centre et affecter le fichier à la classe associé au centre le plus proche
-	parcourt_dossier_classement(Chemin_dossier_B, classe_fichier, centres_corriges);
+			printf("\n\nFin entrainement : %s a ete genere suite au k-means.", Nom_fichier_resultat_kmeans);
+		}
+		else if (choix == '2') {
+			wprintf(L"\n\nEntrainnement - parcours du dossier : %s", Chemin_dossier_lang);
+			nb_fichiers = parcourt_dossier(Chemin_dossier_lang, sauvegarde_moyenne_ecart_type);
 
-	wprintf(L"\nLes fichiers du dossier %s ont ete classes", Chemin_dossier_B);
-	printf(" ; resultat dans %s .\n", Nom_fichier_classement);
+			if (nb_fichiers <= 0) {
+				return EXIT_FAILURE;
+			}
+
+			csv_tableau = construction_tableau(Nom_fichier_moyenne_ecart_type, nb_fichiers);
+			k_means(Nombre_de_classes_lang, csv_tableau, nb_fichiers);
+			// on sauvegarde le résultat du k-means
+			sauvegarde_resultat_kmeans(csv_tableau, nb_fichiers, Nom_fichier_resultat_kmeans_lang); // ensemble A' sous forme de fichier csv
+
+			printf("\n\nFin entrainement : %s a ete genere suite au k-means.", Nom_fichier_resultat_kmeans_lang);
+		}
+		else if (choix == '3') {
+			csv_ngram = fopen("n_gram_entrainement.csv", "w+");
+			for (int indice_classe = 0; indice_classe < 16; indice_classe++) {
+				n_gram_classe(csv_ngram, indice_classe);
+			}
+
+			fclose(csv_ngram);
+		}
+		else if (choix == '4') {
+			nb_fichiers = parcourt_dossier(Chemin_dossier, sauvegarde_moyenne_ecart_type);
+			// construit ensemble (tableau de csv_ligne) à partir du fichier type corrigé
+			csv_tableau_corrige = construction_tableau_corrige(Nom_fichier_type_corrige, nb_fichiers);
+
+			centres_corriges = sauvegarde_centres_corriges(csv_tableau_corrige, nb_fichiers, Nom_fichier_centres_corriges);
+
+			// on va parcourir le dossier contenant les donnés à classer
+			// on va calculer la distance par rapport au centre et affecter le fichier à la classe associé au centre le plus proche
+			parcourt_dossier_classement(Chemin_dossier_B, classe_fichier, centres_corriges);
+
+			wprintf(L"\nLes fichiers du dossier %s ont ete classes", Chemin_dossier_B);
+			printf(" ; resultat dans %s .\n", Nom_fichier_classement);
+		}
+
+	} while (choix != 'q');
 
 	printf("\n\nAppuyez sur ENTER pour quitter le programme. \n");
 	getchar();
